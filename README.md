@@ -16,7 +16,7 @@ Search the full Iconify catalog, select one or more icons, and insert them at th
 3. Double-click **Install Iconify Search for Word.cmd**.
 4. When Word opens, choose **Home > Iconify > Search Icons**.
 
-The installer works per Windows user, detects Word, checks the hosted HTTPS app, installs Microsoft Edge WebView2 if it is missing (with confirmation), registers the manifest, and opens Word. Internet access is required for Iconify searches.
+The installer works per Windows user, detects Word and WebView2, registers the manifest, and opens Word. It does not use PowerShell, bypass execution policy, download programs, or run a silent installer. If WebView2 is missing, it stops and shows Microsoft's official download address. Internet access is required for Iconify searches.
 
 To remove the add-in, double-click **Uninstall Iconify Search for Word.cmd**.
 
