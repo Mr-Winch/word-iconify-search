@@ -1,6 +1,6 @@
 {
   "name": "word-iconify-search",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "Search Iconify and insert SVG or PNG icons into Microsoft Word.",

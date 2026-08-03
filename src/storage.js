@@ -1,3 +1,5 @@
+import { normalizeFavorites } from "./favorites.js";
+
 const DEFAULT_STATE = Object.freeze({
   query: "",
   format: "svg",
@@ -17,7 +19,8 @@ const DEFAULT_STATE = Object.freeze({
     grid: "all",
     similar: true
   },
-  collections: { useAll: true, prefixes: [] }
+  collections: { useAll: true, prefixes: [] },
+  favorites: { sections: [] }
 });
 
 const clamp = (value, min, max, fallback) => {
@@ -39,7 +42,7 @@ export function normalizeState(value = {}) {
     resultLimit: clamp(value.resultLimit, 24, 999, DEFAULT_STATE.resultLimit),
     zoom: clamp(value.zoom, 36, 112, DEFAULT_STATE.zoom),
     preserveSelection: value.preserveSelection !== false,
-    activePanel: value.activePanel === "filtersPanel" ? "filtersPanel" : "iconsPanel",
+    activePanel: ["iconsPanel", "filtersPanel", "favoritesPanel"].includes(value.activePanel) ? value.activePanel : "iconsPanel",
     filters: {
       category: String(filters.category || "all"),
       palette: ["all", "mono", "color"].includes(filters.palette) ? filters.palette : "all",
@@ -53,7 +56,8 @@ export function normalizeState(value = {}) {
       prefixes: Array.isArray(collections.prefixes)
         ? [...new Set(collections.prefixes.filter((item) => typeof item === "string"))]
         : []
-    }
+    },
+    favorites: normalizeFavorites(value.favorites)
   };
 }
 

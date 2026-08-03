@@ -22,3 +22,13 @@ test("deduplicates persisted collection prefixes", () => {
   const state = normalizeState({ collections: { useAll: false, prefixes: ["mdi", "mdi", "tabler"] } });
   assert.deepEqual(state.collections.prefixes, ["mdi", "tabler"]);
 });
+
+
+test("preserves normalized favorites and the favorites panel", () => {
+  const state = normalizeState({
+    activePanel: "favoritesPanel",
+    favorites: { sections: [{ id: "nav", name: "Navigation", icons: ["tabler:home", "tabler:home"] }] }
+  });
+  assert.equal(state.activePanel, "favoritesPanel");
+  assert.deepEqual(state.favorites.sections[0].icons, ["tabler:home"]);
+});

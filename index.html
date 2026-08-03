@@ -34,6 +34,9 @@
       <button class="pivot-button" id="filtersTab" type="button" data-panel="filtersPanel" aria-selected="false">
         Filters <span class="filter-marker" id="filterMarker" hidden aria-label="Filters active"></span>
       </button>
+      <button class="pivot-button" id="favoritesTab" type="button" data-panel="favoritesPanel" aria-selected="false">
+        Favorites <span class="favorites-count" id="favoritesCount" hidden>0</span>
+      </button>
     </nav>
 
     <section class="panel icons-panel" id="iconsPanel">
@@ -123,6 +126,19 @@
       <label class="check-row"><input id="preserveSelection" type="checkbox" checked /><span>Keep selection between searches</span></label>
     </section>
 
+    <section class="panel favorites-panel" id="favoritesPanel" hidden>
+      <div class="favorites-heading">
+        <div>
+          <h2>Favorites</h2>
+          <p>Organize saved icons into your own sections.</p>
+        </div>
+      </div>
+      <div class="favorites-empty" id="favoritesEmpty">
+        <strong>No favorites yet</strong>
+        <span>Use the star button on any icon to save it here.</span>
+      </div>
+      <div class="favorites-list" id="favoritesList"></div>
+    </section>
     <section class="insert-card" aria-label="Insert options">
       <div class="insert-summary">
         <div>
@@ -179,6 +195,25 @@
     </section>
   </main>
 
+  <dialog class="favorite-dialog" id="favoriteDialog" aria-labelledby="favoriteDialogTitle">
+    <form method="dialog" id="favoriteForm">
+      <h2 id="favoriteDialogTitle">Add to favorites</h2>
+      <p class="favorite-dialog-icon" id="favoriteIconName"></p>
+      <div class="field-group">
+        <label for="favoriteSectionSelect">Existing section</label>
+        <select id="favoriteSectionSelect"></select>
+      </div>
+      <div class="favorite-or"><span>or</span></div>
+      <div class="field-group">
+        <label for="newFavoriteSection">New section</label>
+        <input id="newFavoriteSection" type="text" maxlength="80" placeholder="e.g. Navigation, Reports, Social" />
+      </div>
+      <div class="dialog-actions">
+        <button class="subtle-button" id="cancelFavoriteButton" type="button">Cancel</button>
+        <button class="primary-button" id="saveFavoriteButton" type="submit">Save favorite</button>
+      </div>
+    </form>
+  </dialog>
   <div class="toast-region" id="toastRegion" aria-live="assertive"></div>
   <script type="module" src="./src/app.js"></script>
 </body>

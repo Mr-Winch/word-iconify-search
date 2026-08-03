@@ -9,6 +9,14 @@ import {
 } from "./iconify.js";
 import { loadState, normalizeState, saveState } from "./storage.js";
 import {
+  addIconToFavoriteSection,
+  createFavoriteSection,
+  favoriteIconCount,
+  isFavoriteIcon,
+  removeFavoriteSection,
+  removeIconFromFavoriteSection
+} from "./favorites.js";
+import {
   applyOfficeTheme,
   buildThemeColorRows,
   getDocumentThemeColors,
@@ -26,10 +34,15 @@ let resultItems = [];
 let selected = new Map();
 let searchToken = 0;
 let searchTimer;
+let pendingFavoriteItem = null;
+let favoritesRenderToken = 0;
+const favoriteItemCache = new Map();
+const openFavoriteSections = new Set();
 
 function cacheElements() {
   for (const id of [
     "hostStatus", "refreshThemeButton", "searchInput", "searchButton", "filtersTab", "filterMarker",
+    "favoritesTab", "favoritesCount", "favoritesPanel", "favoritesEmpty", "favoritesList",
     "iconsPanel", "selectionSummary", "clearSelectionButton", "iconViewport", "emptyState", "iconGrid",
     "spinner", "resultsStatus", "filtersPanel", "resetFiltersButton", "collectionSearch",
     "allCollectionsButton", "visibleCollectionsButton", "noCollectionsButton", "collectionList",
@@ -37,7 +50,9 @@ function cacheElements() {
     "previewZoom", "similarNames", "preserveSelection", "insertCount", "insertSize", "colorPickerWrap",
     "colorButton", "colorSwatch", "colorValue", "colorPalette", "themeBaseColors", "themeShadeColors",
     "standardColorGrid", "moreColorsButton", "customColorInput", "pngResolutionField", "pngResolution",
-    "preserveColors", "licenseLine", "insertButton", "toastRegion"
+    "preserveColors", "licenseLine", "insertButton", "toastRegion",
+    "favoriteDialog", "favoriteForm", "favoriteIconName", "favoriteSectionSelect",
+    "newFavoriteSection", "cancelFavoriteButton", "saveFavoriteButton"
   ]) elements[id] = byId(id);
   elements.pivots = [...document.querySelectorAll(".pivot-button")];
   elements.formatButtons = [...document.querySelectorAll("[data-format]")];
@@ -62,9 +77,10 @@ function setBusy(busy, status) {
 }
 
 function setPanel(panelId, remember = true) {
-  const target = panelId === "filtersPanel" ? "filtersPanel" : "iconsPanel";
+  const target = ["iconsPanel", "filtersPanel", "favoritesPanel"].includes(panelId) ? panelId : "iconsPanel";
   elements.iconsPanel.hidden = target !== "iconsPanel";
   elements.filtersPanel.hidden = target !== "filtersPanel";
+  elements.favoritesPanel.hidden = target !== "favoritesPanel";
   for (const button of elements.pivots) {
     const active = button.dataset.panel === target;
     button.classList.toggle("is-active", active);
@@ -74,6 +90,7 @@ function setPanel(panelId, remember = true) {
     state.activePanel = target;
     persist();
   }
+  if (target === "favoritesPanel") renderFavorites();
 }
 
 function updateColorControl() {
@@ -247,7 +264,7 @@ function updateSelectionUi() {
   elements.clearSelectionButton.disabled = count === 0;
   elements.insertButton.disabled = count === 0;
   elements.insertButton.textContent = count ? "Insert " + count + (count === 1 ? " icon" : " icons") : "Insert icons";
-  for (const tile of elements.iconGrid.querySelectorAll(".icon-tile")) {
+  for (const tile of document.querySelectorAll(".icon-tile")) {
     const active = selected.has(tile.dataset.name);
     tile.classList.toggle("is-selected", active);
     tile.setAttribute("aria-selected", String(active));
@@ -270,32 +287,240 @@ function toggleSelection(item) {
   updateSelectionUi();
 }
 
+function refreshFavoriteButtons() {
+  for (const button of document.querySelectorAll(".favorite-button")) {
+    const active = isFavoriteIcon(state.favorites, button.dataset.icon);
+    button.classList.toggle("is-favorite", active);
+    button.textContent = active ? "★" : "☆";
+    button.title = active ? "Save in another favorites section" : "Add to favorites";
+    button.setAttribute("aria-label", button.title + ": " + button.dataset.icon);
+  }
+}
+
+function createIconCell(item, { showFavorite = true, onRemove = null } = {}) {
+  const parsed = parseIconName(item.name);
+  const cell = document.createElement("div");
+  cell.className = "icon-cell";
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "icon-tile";
+  button.dataset.name = item.name;
+  button.setAttribute("role", "option");
+  button.setAttribute("aria-label", parsed.name + " from " + (item.collection?.name || parsed.prefix));
+  button.setAttribute("aria-selected", String(selected.has(item.name)));
+  button.title = item.name;
+  if (selected.has(item.name)) button.classList.add("is-selected");
+  const preview = document.createElement("span");
+  preview.className = "preview";
+  preview.innerHTML = item.svg;
+  const label = document.createElement("span");
+  label.className = "icon-name";
+  label.textContent = parsed.name;
+  button.append(preview, label);
+  button.addEventListener("click", () => toggleSelection(item));
+  cell.append(button);
+
+  if (showFavorite) {
+    const favorite = document.createElement("button");
+    favorite.type = "button";
+    favorite.className = "favorite-button";
+    favorite.dataset.icon = item.name;
+    favorite.addEventListener("click", (event) => {
+      event.stopPropagation();
+      openFavoriteDialog(item);
+    });
+    cell.append(favorite);
+  }
+  if (onRemove) {
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "favorite-remove";
+    remove.textContent = "×";
+    remove.title = "Remove from this section";
+    remove.setAttribute("aria-label", "Remove " + item.name + " from this section");
+    remove.addEventListener("click", (event) => {
+      event.stopPropagation();
+      onRemove();
+    });
+    cell.append(remove);
+  }
+  return cell;
+}
+
 function renderResults(items) {
   resultItems = items;
-  const fragment = document.createDocumentFragment();
-  for (const item of items) {
-    const parsed = parseIconName(item.name);
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "icon-tile";
-    button.dataset.name = item.name;
-    button.setAttribute("role", "option");
-    button.setAttribute("aria-label", parsed.name + " from " + (item.collection?.name || parsed.prefix));
-    button.setAttribute("aria-selected", String(selected.has(item.name)));
-    button.title = item.name;
-    if (selected.has(item.name)) button.classList.add("is-selected");
-    const preview = document.createElement("span");
-    preview.className = "preview";
-    preview.innerHTML = item.svg;
-    const label = document.createElement("span");
-    label.className = "icon-name";
-    label.textContent = parsed.name;
-    button.append(preview, label);
-    button.addEventListener("click", () => toggleSelection(item));
-    fragment.append(button);
-  }
-  elements.iconGrid.replaceChildren(fragment);
+  elements.iconGrid.replaceChildren(...items.map((item) => createIconCell(item)));
   elements.emptyState.hidden = items.length > 0;
+  refreshFavoriteButtons();
+  updateSelectionUi();
+}
+
+function openFavoriteDialog(item) {
+  pendingFavoriteItem = item;
+  elements.favoriteIconName.textContent = item.name;
+  elements.favoriteSectionSelect.replaceChildren();
+  for (const section of state.favorites.sections) {
+    const option = document.createElement("option");
+    option.value = section.id;
+    option.textContent = section.name + " (" + section.icons.length + ")";
+    elements.favoriteSectionSelect.append(option);
+  }
+  elements.favoriteSectionSelect.disabled = state.favorites.sections.length === 0;
+  elements.newFavoriteSection.value = "";
+  if (typeof elements.favoriteDialog.showModal === "function") elements.favoriteDialog.showModal();
+  else elements.favoriteDialog.setAttribute("open", "");
+  window.setTimeout(() => state.favorites.sections.length ? elements.favoriteSectionSelect.focus() : elements.newFavoriteSection.focus(), 0);
+}
+
+function closeFavoriteDialog() {
+  pendingFavoriteItem = null;
+  if (typeof elements.favoriteDialog.close === "function") elements.favoriteDialog.close();
+  else elements.favoriteDialog.removeAttribute("open");
+}
+
+function saveFavorite(event) {
+  event.preventDefault();
+  if (!pendingFavoriteItem) return;
+  try {
+    let sectionId = elements.favoriteSectionSelect.value;
+    const newName = elements.newFavoriteSection.value.trim();
+    if (newName) {
+      const created = createFavoriteSection(state.favorites, newName);
+      state.favorites = created.favorites;
+      sectionId = created.section.id;
+      openFavoriteSections.add(sectionId);
+    }
+    const result = addIconToFavoriteSection(state.favorites, sectionId, pendingFavoriteItem.name);
+    state.favorites = result.favorites;
+    persist();
+    const iconName = pendingFavoriteItem.name;
+    closeFavoriteDialog();
+    refreshFavoriteButtons();
+    renderFavorites();
+    showToast(result.added ? "Saved " + iconName + " to favorites." : iconName + " is already in that section.");
+  } catch (error) {
+    showToast(error.message, true);
+  }
+}
+
+function getFavoriteItem(name) {
+  if (!favoriteItemCache.has(name)) {
+    const promise = (async () => {
+      const svg = await fetchIconSvg(name, { preserveColors: true });
+      const parsed = parseIconName(name);
+      const collection = collections.find((item) => item.prefix === parsed.prefix);
+      return { name, svg, style: classifySvgMarkup(svg), collection };
+    })().catch(() => null);
+    favoriteItemCache.set(name, promise);
+  }
+  return favoriteItemCache.get(name);
+}
+
+async function renderFavorites() {
+  if (!state || !elements.favoritesList) return;
+  const sections = state.favorites.sections;
+  const count = favoriteIconCount(state.favorites);
+  elements.favoritesCount.textContent = String(count);
+  elements.favoritesCount.hidden = count === 0;
+  elements.favoritesEmpty.hidden = sections.length > 0;
+  if (!sections.length) {
+    elements.favoritesList.replaceChildren();
+    return;
+  }
+  if (!openFavoriteSections.size) openFavoriteSections.add(sections[0].id);
+  const token = ++favoritesRenderToken;
+  elements.favoritesList.textContent = "Loading favorites…";
+  const names = [...new Set(sections.flatMap((section) => section.icons))];
+  const loaded = await Promise.all(names.map(async (name) => [name, await getFavoriteItem(name)]));
+  if (token !== favoritesRenderToken) return;
+  const items = new Map(loaded);
+  const fragment = document.createDocumentFragment();
+
+  for (const section of sections) {
+    const article = document.createElement("section");
+    article.className = "favorite-section";
+    const open = openFavoriteSections.has(section.id);
+    article.classList.toggle("is-open", open);
+    const header = document.createElement("div");
+    header.className = "favorite-section-header";
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "favorite-section-toggle";
+    toggle.setAttribute("aria-expanded", String(open));
+    toggle.innerHTML = '<span class="chevron">›</span><span class="section-name"></span><span class="section-count"></span>';
+    toggle.querySelector(".section-name").textContent = section.name;
+    toggle.querySelector(".section-count").textContent = section.icons.length + (section.icons.length === 1 ? " icon" : " icons");
+    const deleteSection = document.createElement("button");
+    deleteSection.type = "button";
+    deleteSection.className = "delete-section-button";
+    deleteSection.textContent = "×";
+    deleteSection.title = "Delete section";
+    deleteSection.setAttribute("aria-label", "Delete favorites section " + section.name);
+    const body = document.createElement("div");
+    body.className = "favorite-section-body";
+    body.hidden = !open;
+    toggle.addEventListener("click", () => {
+      if (openFavoriteSections.has(section.id)) openFavoriteSections.delete(section.id);
+      else openFavoriteSections.add(section.id);
+      renderFavorites();
+    });
+    deleteSection.addEventListener("click", () => {
+      if (!window.confirm('Delete the favorites section "' + section.name + '"?')) return;
+      state.favorites = removeFavoriteSection(state.favorites, section.id);
+      openFavoriteSections.delete(section.id);
+      persist();
+      refreshFavoriteButtons();
+      renderFavorites();
+    });
+    header.append(toggle, deleteSection);
+    article.append(header, body);
+
+    if (section.icons.length) {
+      const grid = document.createElement("div");
+      grid.className = "favorite-section-grid";
+      for (const name of section.icons) {
+        const item = items.get(name);
+        if (item) {
+          grid.append(createIconCell(item, {
+            showFavorite: false,
+            onRemove: () => {
+              state.favorites = removeIconFromFavoriteSection(state.favorites, section.id, name);
+              persist();
+              refreshFavoriteButtons();
+              renderFavorites();
+            }
+          }));
+        } else {
+          const unavailable = document.createElement("div");
+          unavailable.className = "favorite-unavailable";
+          const unavailableLabel = document.createElement("span");
+          unavailableLabel.textContent = name + " is unavailable";
+          const removeUnavailable = document.createElement("button");
+          removeUnavailable.type = "button";
+          removeUnavailable.className = "favorite-unavailable-remove";
+          removeUnavailable.textContent = "×";
+          removeUnavailable.title = "Remove this icon";
+          removeUnavailable.setAttribute("aria-label", "Remove " + name + " from favorites");
+          removeUnavailable.addEventListener("click", () => {
+            state.favorites = removeIconFromFavoriteSection(state.favorites, section.id, name);
+            persist();
+            refreshFavoriteButtons();
+            renderFavorites();
+          });
+          unavailable.append(unavailableLabel, removeUnavailable);
+          grid.append(unavailable);
+        }
+      }
+      body.append(grid);
+    } else {
+      const empty = document.createElement("p");
+      empty.className = "favorite-section-empty";
+      empty.textContent = "This section is empty.";
+      body.append(empty);
+    }
+    fragment.append(article);
+  }
+  elements.favoritesList.replaceChildren(fragment);
   updateSelectionUi();
 }
 
@@ -402,6 +627,9 @@ function resetFilters() {
 
 function bindEvents() {
   elements.pivots.forEach((button) => button.addEventListener("click", () => setPanel(button.dataset.panel)));
+  elements.favoriteForm.addEventListener("submit", saveFavorite);
+  elements.cancelFavoriteButton.addEventListener("click", closeFavoriteDialog);
+  elements.favoriteDialog.addEventListener("close", () => { pendingFavoriteItem = null; });
   elements.refreshThemeButton.addEventListener("click", () => {
     applyOfficeTheme();
     showToast("Word theme refreshed.");
@@ -548,8 +776,10 @@ async function initialize() {
   setBusy(true, "Loading icon collections…");
   try {
     collections = await listCollections();
+    favoriteItemCache.clear();
     populateCatalogFilters();
     renderCollections();
+    if (state.activePanel === "favoritesPanel") renderFavorites();
     elements.resultsStatus.textContent = collections.length.toLocaleString() + " collections ready";
   } catch (error) {
     elements.resultsStatus.textContent = "Could not load icon collections.";

@@ -6,6 +6,7 @@ Search the full Iconify catalog, select one or more icons, and insert them at th
 
 - Native-looking Word task pane with automatic Office light/dark theme support
 - Full Iconify collection browser, search filters, multi-selection, persistent settings, and adjustable preview zoom
+- Favorites organized into named accordion sections, with persistent storage and per-icon or per-section deletion
 - SVG/PNG format toggle, insertion size, PNG resolution, and an Office-style color palette
 - SVG insertion with automatic PNG fallback on Word builds that do not support ImageCoercion 1.2
 
