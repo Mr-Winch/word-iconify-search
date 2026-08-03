@@ -1,0 +1,28 @@
+Iconify Search for Word — installation
+=========================================
+
+Recommended antivirus-safe installation
+---------------------------------------
+
+This package contains no executable installer and makes no direct Windows
+Registry changes.
+
+1. Extract the complete ZIP.
+2. Open Word and open or create a document.
+3. Choose Home > Add-ins > More Add-ins.
+4. Open My Add-ins.
+5. Choose Manage My Add-ins > Upload My Add-in.
+6. Browse to manifest.xml in this folder and choose Upload.
+7. Choose Home > Iconify > Search Icons.
+
+Depending on the Office build, “Upload My Add-in” can instead appear under
+Advanced or More Settings in the Add-ins dialog.
+
+Internet access is required while searching Iconify. The add-in interface is
+hosted on GitHub Pages and the manifest uses HTTPS.
+
+Removal
+-------
+
+Open Home > Add-ins > More Add-ins > My Add-ins. Open the menu for Iconify
+Search and choose Remove.

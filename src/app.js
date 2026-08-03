@@ -427,7 +427,6 @@ async function renderFavorites() {
     elements.favoritesList.replaceChildren();
     return;
   }
-  if (!openFavoriteSections.size) openFavoriteSections.add(sections[0].id);
   const token = ++favoritesRenderToken;
   elements.favoritesList.textContent = "Loading favorites…";
   const names = [...new Set(sections.flatMap((section) => section.icons))];
@@ -465,12 +464,12 @@ async function renderFavorites() {
       renderFavorites();
     });
     deleteSection.addEventListener("click", () => {
-      if (!window.confirm('Delete the favorites section "' + section.name + '"?')) return;
       state.favorites = removeFavoriteSection(state.favorites, section.id);
       openFavoriteSections.delete(section.id);
       persist();
       refreshFavoriteButtons();
       renderFavorites();
+      showToast('Deleted favorites section "' + section.name + '".');
     });
     header.append(toggle, deleteSection);
     article.append(header, body);

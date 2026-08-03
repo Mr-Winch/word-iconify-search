@@ -12,14 +12,15 @@ Search the full Iconify catalog, select one or more icons, and insert them at th
 
 ## Install on Windows
 
-1. Download and extract the release ZIP.
-2. Install Microsoft Word or Microsoft 365.
-3. Double-click **Install Iconify Search for Word.cmd**.
-4. When Word opens, choose **Home > Iconify > Search Icons**.
+The release ZIP uses Office's built-in **Upload My Add-in** flow and contains no executable installer or Registry script.
 
-The installer works per Windows user, detects Word and WebView2, registers the manifest, and opens Word. It does not use PowerShell, bypass execution policy, download programs, or run a silent installer. If WebView2 is missing, it stops and shows Microsoft's official download address. Internet access is required for Iconify searches.
+1. Extract the release ZIP.
+2. Open Word and choose **Home > Add-ins > More Add-ins**.
+3. Open **My Add-ins**, then choose **Manage My Add-ins > Upload My Add-in**.
+4. Select `manifest.xml` from the extracted folder.
+5. Choose **Home > Iconify > Search Icons**.
 
-To remove the add-in, double-click **Uninstall Iconify Search for Word.cmd**.
+Some Office builds place **Upload My Add-in** under **Advanced** or **More Settings**. See `INSTALLATION.txt` in the ZIP for the same offline instructions. Internet access is required for Iconify searches.
 
 ## Development
 
