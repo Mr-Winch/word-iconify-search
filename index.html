@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+  <title>Iconify Search</title>
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <link rel="stylesheet" href="./src/styles.css" />
+</head>
+<body>
+  <main class="app-shell" id="appShell">
+    <header class="app-header">
+      <img class="brand-icon" src="./assets/iconify-search.svg" alt="" />
+      <div class="brand-copy">
+        <h1>Iconify Search</h1>
+        <p id="hostStatus">Word icon library</p>
+      </div>
+      <button class="icon-button" id="refreshThemeButton" type="button" title="Refresh Office theme" aria-label="Refresh Office theme">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.34 5.66M20 4v7h-7"/></svg>
+      </button>
+    </header>
+
+    <section class="search-bar" aria-label="Search Iconify">
+      <div class="search-input-wrap">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+        <input id="searchInput" type="search" autocomplete="off" spellcheck="false" placeholder="Search icons" aria-label="Search icons" />
+      </div>
+      <button class="primary-button search-button" id="searchButton" type="button">Search</button>
+    </section>
+
+    <nav class="pivot" aria-label="Icon browser sections">
+      <button class="pivot-button is-active" type="button" data-panel="iconsPanel" aria-selected="true">Icons</button>
+      <button class="pivot-button" id="filtersTab" type="button" data-panel="filtersPanel" aria-selected="false">
+        Filters <span class="filter-marker" id="filterMarker" hidden aria-label="Filters active"></span>
+      </button>
+    </nav>
+
+    <section class="panel icons-panel" id="iconsPanel">
+      <div class="panel-toolbar">
+        <div>
+          <span class="section-heading">Results</span>
+          <span class="selection-summary" id="selectionSummary">No icons selected</span>
+        </div>
+      </div>
+
+      <div class="icon-viewport" id="iconViewport">
+        <div class="empty-state" id="emptyState">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+          <strong>Search the Iconify catalog</strong>
+          <span>Type two characters, or choose one collection to browse.</span>
+        </div>
+        <div class="icon-grid" id="iconGrid" role="listbox" aria-label="Icon results" aria-multiselectable="true"></div>
+      </div>
+      <div class="results-status" role="status" aria-live="polite">
+        <span class="spinner" id="spinner" hidden></span>
+        <span id="resultsStatus">Loading icon collections…</span>
+      </div>
+    </section>
+
+    <section class="panel filters-panel" id="filtersPanel" hidden>
+      <div class="filter-heading-row">
+        <div>
+          <h2>Refine results</h2>
+          <p>Changes apply automatically.</p>
+        </div>
+        <button class="subtle-button" id="resetFiltersButton" type="button">Reset</button>
+      </div>
+
+      <div class="field-group collection-field">
+        <label for="collectionSearch">Collections</label>
+        <input id="collectionSearch" type="search" placeholder="Find a collection" autocomplete="off" />
+        <div class="mini-actions">
+          <button type="button" id="allCollectionsButton">All</button>
+          <button type="button" id="visibleCollectionsButton">Visible</button>
+          <button type="button" id="noCollectionsButton">None</button>
+        </div>
+        <div class="collection-list" id="collectionList" role="group" aria-label="Icon collections"></div>
+      </div>
+
+      <div class="filter-grid">
+        <div class="field-group full-width">
+          <label for="categoryFilter">Collection category</label>
+          <select id="categoryFilter"><option value="all">All categories</option></select>
+        </div>
+        <div class="field-group">
+          <label for="paletteFilter">Palette</label>
+          <select id="paletteFilter">
+            <option value="all">All palettes</option>
+            <option value="mono">Monotone</option>
+            <option value="color">Multicolor</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label for="styleFilter">Icon style</label>
+          <select id="styleFilter">
+            <option value="all">All styles</option>
+            <option value="stroke">Outline</option>
+            <option value="fill">Filled</option>
+            <option value="mixed">Mixed</option>
+            <option value="color">Multicolor</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label for="licenseFilter">License</label>
+          <select id="licenseFilter"><option value="all">All licenses</option></select>
+        </div>
+        <div class="field-group">
+          <label for="gridFilter">Grid</label>
+          <select id="gridFilter"><option value="all">All sizes</option></select>
+        </div>
+        <div class="field-group">
+          <label for="resultLimit">Result limit</label>
+          <input id="resultLimit" type="number" min="32" max="256" step="8" value="120" />
+        </div>
+        <div class="field-group">
+          <label for="previewZoom">Preview zoom</label>
+          <input id="previewZoom" type="range" min="36" max="96" step="6" value="60" />
+        </div>
+      </div>
+
+      <label class="check-row"><input id="similarNames" type="checkbox" checked /><span>Include similar names</span></label>
+      <label class="check-row"><input id="preserveSelection" type="checkbox" checked /><span>Keep selection between searches</span></label>
+    </section>
+
+    <section class="insert-card" aria-label="Insert options">
+      <div class="insert-summary">
+        <div>
+          <span class="section-heading">Insert</span>
+          <span id="insertCount">Select one or more icons</span>
+        </div>
+        <div class="format-toggle" role="group" aria-label="Insert format">
+          <button class="is-active" type="button" data-format="svg" aria-pressed="true">SVG</button>
+          <button type="button" data-format="png" aria-pressed="false">PNG</button>
+        </div>
+      </div>
+      <div class="insert-controls">
+        <div class="field-group compact-field">
+          <label for="insertSize">Size</label>
+          <div class="unit-input"><input id="insertSize" type="number" min="12" max="720" step="6" value="72" /><span>pt</span></div>
+        </div>
+        <div class="field-group compact-field color-field">
+          <label id="iconColorLabel" for="colorButton">Color</label>
+          <div class="color-picker-wrap" id="colorPickerWrap">
+            <button class="color-trigger" id="colorButton" type="button" aria-haspopup="dialog" aria-expanded="false">
+              <span class="color-trigger-swatch" id="colorSwatch" aria-hidden="true"></span>
+              <span class="color-trigger-value" id="colorValue">#2B579A</span>
+              <span class="color-trigger-chevron" aria-hidden="true">⌄</span>
+            </button>
+            <div class="color-palette" id="colorPalette" role="dialog" aria-labelledby="iconColorLabel" hidden>
+              <section class="palette-section" aria-labelledby="themeColorsHeading">
+                <strong id="themeColorsHeading">Theme Colors</strong>
+                <div class="color-grid theme-base-grid" id="themeBaseColors" role="group" aria-label="Theme colors"></div>
+                <div class="color-grid theme-shade-grid" id="themeShadeColors" role="group" aria-label="Theme color shades"></div>
+              </section>
+              <section class="palette-section" aria-labelledby="standardColorsHeading">
+                <strong id="standardColorsHeading">Standard Colors</strong>
+                <div class="color-grid standard-color-grid" id="standardColorGrid" role="group" aria-label="Standard colors"></div>
+              </section>
+              <button class="more-colors-button" id="moreColorsButton" type="button">
+                <span class="more-colors-icon" aria-hidden="true">◉</span>
+                <span>More Colors…</span>
+              </button>
+              <input class="native-color-input" id="customColorInput" type="color" value="#2B579A" tabindex="-1" aria-hidden="true" />
+            </div>
+          </div>
+        </div>
+        <div class="field-group compact-field png-only" id="pngResolutionField" hidden>
+          <label for="pngResolution">PNG</label>
+          <div class="unit-input"><input id="pngResolution" type="number" min="64" max="2048" step="64" value="256" /><span>px</span></div>
+        </div>
+      </div>
+      <label class="check-row preserve-row"><input id="preserveColors" type="checkbox" /><span>Preserve original icon colors</span></label>
+      <div class="license-line" id="licenseLine">Source and license details appear after selection.</div>
+      <div class="insert-actions">
+        <button class="subtle-button clear-all-button" id="clearSelectionButton" type="button" disabled>Clear all</button>
+        <button class="primary-button insert-button" id="insertButton" type="button" disabled>Insert icons</button>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast-region" id="toastRegion" aria-live="assertive"></div>
+  <script type="module" src="./src/app.js"></script>
+</body>
+</html>

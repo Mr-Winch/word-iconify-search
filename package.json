@@ -1,0 +1,21 @@
+{
+  "name": "word-iconify-search",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Search Iconify and insert SVG or PNG icons into Microsoft Word.",
+  "scripts": {
+    "dev-server": "vite --host localhost --port 3000",
+    "start": "office-addin-debugging start manifest.local.xml desktop --app word --dev-server \"npm run dev-server\" --dev-server-port 3000 --no-live-reload",
+    "stop": "office-addin-debugging stop manifest.local.xml",
+    "build": "vite build",
+    "validate": "office-addin-manifest validate manifest.xml && office-addin-manifest validate manifest.local.xml",
+    "test": "node --test tests/*.test.js"
+  },
+  "devDependencies": {
+    "office-addin-debugging": "^6.0.3",
+    "office-addin-dev-certs": "^2.0.5",
+    "office-addin-manifest": "^2.1.2",
+    "vite": "^7.1.0"
+  }
+}
