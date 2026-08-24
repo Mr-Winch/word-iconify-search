@@ -1,5 +1,5 @@
-Iconify Search for Word — installation
-=========================================
+Iconify Search for Word 1.0.0 — installation
+==========================================
 
 Recommended installation
 ------------------------

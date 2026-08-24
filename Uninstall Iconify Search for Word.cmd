@@ -1,13 +1,13 @@
 @echo off
 setlocal EnableExtensions
-title Uninstall Iconify Search for Word
+title Uninstall Iconify Search for Word v1.0.0
 
 set "ADDIN_ID=7f3bf54a-0d0e-4840-ade6-c630c5b7c22e"
 set "TARGET_DIR=%LOCALAPPDATA%\Iconify Search for Word"
 set "DEV_KEY=HKCU\SOFTWARE\Microsoft\Office\16.0\Wef\Developer"
 
 echo.
-echo  Uninstall Iconify Search for Word
+echo  Uninstall Iconify Search for Word v1.0.0
 echo  --------------------------------
 echo.
 
