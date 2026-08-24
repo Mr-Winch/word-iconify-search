@@ -1,14 +1,24 @@
 {
   "name": "word-iconify-search",
-  "version": "0.2.2",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "description": "Search Iconify and insert SVG or PNG icons into Microsoft Word.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Mr-Winch/word-iconify-search.git"
+  },
+  "homepage": "https://mr-winch.github.io/word-iconify-search/",
+  "bugs": "https://github.com/Mr-Winch/word-iconify-search/issues",
+  "engines": {
+    "node": ">=20.19"
+  },
   "scripts": {
     "dev-server": "vite --host localhost --port 3000",
     "start": "office-addin-debugging start manifest.local.xml desktop --app word --dev-server \"npm run dev-server\" --dev-server-port 3000 --no-live-reload",
     "stop": "office-addin-debugging stop manifest.local.xml",
     "build": "vite build",
+    "package": "pwsh -NoProfile -File scripts/package-release.ps1",
     "validate": "office-addin-manifest validate manifest.xml && office-addin-manifest validate manifest.local.xml",
     "test": "node --test tests/*.test.js"
   },

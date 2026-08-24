@@ -1,0 +1,33 @@
+name: Validate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test-build-package:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm audit --omit=dev
+      - run: npm test
+      - run: npm run validate
+      - run: npm run build
+      - run: npm run package
+      - name: Verify SHA-256 checksum
+        shell: pwsh
+        run: |
+          $checksumFile = Get-ChildItem release\*.zip.sha256 | Select-Object -First 1
+          $expected = ((Get-Content -Raw $checksumFile.FullName).Trim() -split "\s+")[0]
+          $archive = $checksumFile.FullName -replace "\.sha256$", ""
+          $actual = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actual -ne $expected) { throw "SHA-256 mismatch" }

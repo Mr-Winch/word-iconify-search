@@ -2,6 +2,8 @@
 
 Search the full Iconify catalog, select one or more icons, and insert them at the current Word cursor as SVG or transparent PNG.
 
+Current public version: **1.0.0**.
+
 ## Features
 
 - Native-looking Word task pane with automatic Office light/dark theme support
@@ -23,6 +25,14 @@ The installer is designed for a clean Windows computer and does not require Git,
 The installer intentionally does **not** launch Word; this avoids the Behavior Shield alert caused when `cmd.exe` registered the add-in and immediately opened Office. A script-free **Upload My Add-in** alternative is documented in `INSTALLATION.txt`.
 
 To remove the add-in, close Word and double-click **Uninstall Iconify Search for Word.cmd**.
+
+The recommended release file is `Iconify-Search-for-Word-v1.0.0.zip`. Its accompanying `.sha256` file can be checked on Windows with:
+
+```powershell
+(Get-FileHash .\Iconify-Search-for-Word-v1.0.0.zip -Algorithm SHA256).Hash
+```
+
+If security software blocks command scripts, use the script-free **Upload My Add-in** method in `INSTALLATION.txt`; it installs the same signed release manifest without running the installer.
 
 ## Development
 
