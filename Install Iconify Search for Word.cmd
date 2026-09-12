@@ -1,6 +1,6 @@
 @echo off
 setlocal EnableExtensions
-title Install Iconify Search for Word v1.0.0
+title Install Iconify Search for Word v1.0.1
 
 set "ADDIN_ID=7f3bf54a-0d0e-4840-ade6-c630c5b7c22e"
 set "SOURCE=%~dp0manifest.xml"
@@ -10,7 +10,7 @@ set "DEV_KEY=HKCU\SOFTWARE\Microsoft\Office\16.0\Wef\Developer"
 set "OFFICE_EXE="
 
 echo.
-echo  Iconify Search for Word v1.0.0
+echo  Iconify Search for Word v1.0.1
 echo  -----------------------
 echo.
 

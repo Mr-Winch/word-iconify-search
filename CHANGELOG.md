@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.1 — 2026-09-12
+
+- Added XMLHttpRequest and JSONP transports when WebView2 cannot use `fetch` with Iconify.
+- Added a direct icon-data fallback that reconstructs safe SVG markup for preview and insertion.
+- Preserved Iconify's three official API hosts and existing SVG sanitization.
+
 ## 1.0.0 — 2026-08-24
 
 - Promoted the complete Word add-in to its first stable public version.
