@@ -1,23 +1,116 @@
+import { renderIconSetSvg } from "./iconify-render.js";
+export { renderIconSetSvg } from "./iconify-render.js";
+
 const API_BASES = ["https://api.iconify.design", "https://api.simplesvg.com", "https://api.unisvg.com"];
 const REQUEST_TIMEOUT = 12000;
+let jsonpSequence = 0;
+
+async function requestWithFetch(url, asText) {
+  const controller = typeof AbortController === "function" ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), REQUEST_TIMEOUT) : null;
+  try {
+    const response = await fetch(url, {
+      signal: controller?.signal,
+      headers: { Accept: asText ? "image/svg+xml,text/plain" : "application/json" }
+    });
+    if (!response.ok) throw new Error("HTTP " + response.status);
+    return asText ? await response.text() : await response.json();
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+function requestWithXhr(url, asText) {
+  return new Promise((resolve, reject) => {
+    if (typeof XMLHttpRequest !== "function") {
+      reject(new Error("XMLHttpRequest is unavailable"));
+      return;
+    }
+    const xhr = new XMLHttpRequest();
+    xhr.open("GET", url, true);
+    xhr.timeout = REQUEST_TIMEOUT;
+    xhr.setRequestHeader("Accept", asText ? "image/svg+xml,text/plain" : "application/json");
+    xhr.onload = () => {
+      if (xhr.status < 200 || xhr.status >= 300) {
+        reject(new Error("HTTP " + xhr.status));
+        return;
+      }
+      if (asText) {
+        resolve(xhr.responseText);
+        return;
+      }
+      try {
+        resolve(JSON.parse(xhr.responseText));
+      } catch {
+        reject(new Error("Iconify returned invalid JSON"));
+      }
+    };
+    xhr.onerror = () => reject(new Error("XMLHttpRequest network error"));
+    xhr.ontimeout = () => reject(new Error("XMLHttpRequest timed out"));
+    xhr.onabort = () => reject(new Error("XMLHttpRequest was aborted"));
+    xhr.send();
+  });
+}
+
+export function requestWithJsonp(url) {
+  return new Promise((resolve, reject) => {
+    if (typeof document === "undefined") {
+      reject(new Error("JSONP is unavailable"));
+      return;
+    }
+    const callback = "iconifySearch" + Date.now() + (++jsonpSequence);
+    const endpoint = new URL(url);
+    if (endpoint.pathname.endsWith(".json")) {
+      endpoint.pathname = endpoint.pathname.slice(0, -5) + ".js";
+    }
+    endpoint.searchParams.set("callback", callback);
+    const script = document.createElement("script");
+    const timer = setTimeout(() => finish(new Error("JSONP timed out")), REQUEST_TIMEOUT);
+    let complete = false;
+    const finish = (error, value) => {
+      if (complete) return;
+      complete = true;
+      clearTimeout(timer);
+      script.remove();
+      try {
+        delete globalThis[callback];
+      } catch {
+        globalThis[callback] = undefined;
+      }
+      if (error) reject(error);
+      else resolve(value);
+    };
+    globalThis[callback] = (value) => finish(null, value);
+    script.async = true;
+    script.onerror = () => finish(new Error("JSONP network error"));
+    script.src = endpoint.href;
+    (document.head || document.documentElement).append(script);
+  });
+}
 
 async function request(path, asText = false) {
   const failures = [];
   for (const base of API_BASES) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+    const url = base + path;
+    const errors = [];
     try {
-      const response = await fetch(base + path, {
-        signal: controller.signal,
-        headers: { Accept: asText ? "image/svg+xml,text/plain" : "application/json" }
-      });
-      if (!response.ok) throw new Error("HTTP " + response.status);
-      return asText ? await response.text() : await response.json();
+      return await requestWithFetch(url, asText);
     } catch (error) {
-      failures.push(base + ": " + error.message);
-    } finally {
-      clearTimeout(timer);
+      errors.push("fetch: " + error.message);
     }
+    try {
+      return await requestWithXhr(url, asText);
+    } catch (error) {
+      errors.push("XHR: " + error.message);
+    }
+    if (!asText) {
+      try {
+        return await requestWithJsonp(url);
+      } catch (error) {
+        errors.push("script fallback: " + error.message);
+      }
+    }
+    failures.push(base + ": " + errors.join("; "));
   }
   throw new Error("Could not reach Iconify. " + failures.join(" | "));
 }
@@ -150,11 +243,24 @@ export async function fetchIconSvg(fullName, options = {}) {
   const params = new URLSearchParams();
   if (!options.preserveColors && options.color) params.set("color", options.color);
   const query = params.size ? "?" + params : "";
-  const svg = sanitizeSvg(await request(
-    "/" + encodeURIComponent(prefix) + "/" + encodeURIComponent(name) + ".svg" + query,
-    true
-  ));
-  return svg;
+  try {
+    return sanitizeSvg(await request(
+      "/" + encodeURIComponent(prefix) + "/" + encodeURIComponent(name) + ".svg" + query,
+      true
+    ));
+  } catch (directError) {
+    try {
+      const iconSet = await request(
+        "/" + encodeURIComponent(prefix) + ".json?" + new URLSearchParams({ icons: name })
+      );
+      return sanitizeSvg(renderIconSetSvg(iconSet, name, options));
+    } catch (dataError) {
+      throw new Error(
+        "Could not load " + fullName + ". Direct SVG: " + directError.message
+        + "; icon-data fallback: " + dataError.message
+      );
+    }
+  }
 }
 
 export function svgToBase64(svg) {
